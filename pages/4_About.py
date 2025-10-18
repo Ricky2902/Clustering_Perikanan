@@ -18,7 +18,7 @@ col1, col2 = st.columns([1, 2], gap="medium")
 with col1:
     # Path ke gambar profil Anda
     # Ganti 'profil.png' dengan nama file foto Anda jika berbeda
-    profile_image_path = os.path.join('Assets', 'Profile.jpg')
+    profile_image_path = os.path.join('assets', 'Profile.jpg')
     
     if os.path.exists(profile_image_path):
         profile_image = Image.open(profile_image_path)
@@ -42,6 +42,6 @@ st.header("Tentang Proyek Ini")
 st.write("""
 Aplikasi ini dikembangkan sebagai bagian dari **Tugas Akhir Skripsi** dengan judul **"Pengelompok dan Analisis Clustering Produksi Perikanan Tangkap laut di Indonesia Dengan Mengunakan Metode K-Means, BIRCH dan OPTICS"**. 
 
-Fokus utama proyek ini adalah untuk menerapkan dan membandingkan beberapa algoritma clustering untuk menganalisis pola dalam data perikanan tangkap laut di Indonesia lalu mevisualisasikan melalui pemetaan. Tujuannya adalah untuk memberikan informasi bagi setiap orang akan potensi kelautan di indonesiaa dengan memberikan analasis yang interaktif, visual, dan mudah digunakan bagi massyarakat maupun peneliti untuk mempelajari sektor perikanan di Indonesia.
+Fokus utama proyek ini adalah untuk menerapkan dan membandingkan beberapa algoritma clustering untuk menganalisis pola dalam data perikanan tangkap laut di Indonesia lalu mevisualisasikan melalui pemetaan. Tujuannya adalah untuk memberikan informasi bagi setiap orang akan potensi kelautan di indonesia dengan memberikan analasis yang interaktif, visual, dan mudah digunakan bagi masyarakat  untuk mempelajari Clustering di sektor perikanan di Indonesia.
 """)
 
