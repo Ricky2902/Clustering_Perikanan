@@ -11,6 +11,7 @@ st.set_page_config(
 # --- Konten Halaman ---
 st.title("🌊🐟Pengelompokan dan Analisis Clustering Produksi Perikanan Tangkap Laut di Indonesia")
 st.markdown("---")
+st.sidebar.success("Anda berada di halaman Home. Gunakan menu navigasi untuk menjelajahi fitur lainnya.")
 
 # Menampilkan gambar utama
 # Pastikan gambar.png ada di dalam folder Assets
