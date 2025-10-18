@@ -116,7 +116,7 @@ Aplikasi ini memungkinkan Anda untuk melakukan analisis clustering pada data per
 
 st.title("📂 Dataset")
 col1, col2, col3 = st.columns(3)
-assets_path = 'Files' 
+assets_path = 'files' 
 if os.path.exists(assets_path):
     with col1:
         template_file = "Template_Dataset.xlsx"

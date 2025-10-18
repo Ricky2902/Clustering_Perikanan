@@ -15,7 +15,7 @@ st.markdown("---")
 
 # Menampilkan gambar utama
 # Pastikan gambar.png ada di dalam folder Assets
-image_path = os.path.join('Assets', 'laut.png')
+image_path = os.path.join('assets', 'laut.png')
 if os.path.exists(image_path):
     st.image(image_path, caption="perairan Pulau Gunung Api Banda, Salah Satu Ekosistem Laut yang kaya Akan jenis ikan Dan Terumbu Karang di Indonesia")
 else:
