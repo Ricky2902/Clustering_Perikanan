@@ -4,7 +4,8 @@ import os
 st.set_page_config(
     page_title="Home | Analisis Clustering Perikanan",
     page_icon="🐟",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state='expanded'
 )
 
 # --- Konten Halaman ---
