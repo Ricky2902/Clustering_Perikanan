@@ -9,10 +9,32 @@ import seaborn as sns
 
 # Fitur yang akan dicari dan dianalisis secara otomatis dari file Excel.
 # Pastikan nama kolom di Excel Anda diawali dengan nama-nama ini (contoh: "Produksi_2020").
-FEATURE_PRODUKSI = ['Nelayan', 'Volume', 'Produksi', 'Konsumsi']
+FEATURE_PRODUKSI = ['Volume', 'Nilai', 'Konsumsi', 'Nelayan']
 
-# Palet warna untuk konsistensi visualisasi di seluruh aplikasi.
-COLOR_PALETTE = ['blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink']
+# Custom color palette untuk clusters dan kategori (warna kontras)
+# Diubah sesuai permintaan: 6=Hijau, 1=Orange, 2=Kuning, 3=Ungu, 4=Biru, 5=Cyan
+CLUSTER_COLORS = {
+    0: '#ff4d4d',  # Merah (default untuk cluster 0)
+    1: '#ff8000',  # Orange
+    2: '#ffcc00',  # Kuning
+    3: '#9933ff',  # Ungu
+    4: '#3366ff',  # Biru
+    5: '#00cccc',  # Cyan
+    6: '#33cc33',  # Hijau
+    -1: '#999999'  # Abu-abu (untuk outlier)
+}
+
+# Mapping kategori ke warna (disesuaikan agar konsisten dengan palette cluster dan kontras)
+CATEGORY_COLORS = {
+    'Sangat Rendah': '#ff4d4d',    # Merah
+    'Rendah': '#ff8000',           # Orange
+    'Cukup Rendah': '#ffcc00',     # Kuning
+    'Sedang': '#9933ff',           # Ungu
+    'Cukup Tinggi': '#3366ff',     # Biru
+    'Tinggi': '#00cccc',           # Cyan
+    'Sangat Tinggi': '#33cc33',    # Hijau
+    'Outlier': '#999999'           # Abu-abu
+}
 
 
 # =============================================================================
@@ -40,7 +62,7 @@ def initialize_clustering_model(method, params):
     if method == 'BIRCH':
         return Birch(
             n_clusters=params.get('n_clusters', 3),
-            threshold=params.get('threshold', 0.5),
+            threshold=params.get('threshold', 0.1),
             branching_factor=params.get('branching_factor', 50)
         )
     if method == 'OPTICS':
