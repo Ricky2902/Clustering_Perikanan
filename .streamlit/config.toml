@@ -1,0 +1,16 @@
+[theme]
+
+# Ini akan menjadi tema dasar "terang"
+base = "light"
+
+# Warna konten utama (Biru Langit / Pastel)
+backgroundColor = "#E0F7FA"
+
+# Warna latar belakang sekunder (untuk widget seperti selectbox)
+secondaryBackgroundColor = "#2b2be4ff"
+
+# Warna teks utama (gelap agar terbaca di latar biru muda)
+textColor = "#212121"
+
+# Warna utama untuk tombol, slider, dll.
+primaryColor = "#0D47A1"

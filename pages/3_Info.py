@@ -1,10 +1,47 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="Informasi", 
-    page_icon="ℹ️", 
+    page_title="INFO | FISHERY CLUSTER", 
+    page_icon="assets/logo1.png", 
     layout="wide"
 )
+
+# === [PERUBAHAN] TAMBAHKAN BLOK KODE CSS INI ===
+# Ini adalah "hack" untuk membuat sidebar gelap secara paksa
+
+st.markdown("""
+<style>
+    /* Target sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #00427A !important; /* Biru Laut Gelap */
+    }
+
+    /* Target semua teks di dalam sidebar */
+    [data-testid="stSidebar"] div,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] p {
+        color: #FFFFFF !important; /* Paksa teks jadi putih */
+    }
+    
+    /* Target judul di sidebar (jika ada) */
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] h4 {
+        color: #E0F7FA !important; /* Teks judul jadi biru muda */
+    }
+
+    /* Target link/menu navigasi di sidebar */
+    [data-testid="stSidebar"] a {
+        color: #FFFFFF !important; /* Teks link jadi putih */
+    }
+
+    /* Target ikon panah expander di sidebar (jika ada) */
+    [data-testid="stSidebar"] .st-emotion-cache-16txtl3 {
+        color: #FFFFFF !importan;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # --- Konten Halaman ---
 st.title("ℹ️ Pusat Informasi")

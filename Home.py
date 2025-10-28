@@ -2,14 +2,60 @@ import streamlit as st
 import os
 
 st.set_page_config(
-    page_title="Home | Analisis Clustering Perikanan",
-    page_icon="🐟",
+    page_title="HOME | FISHERY CLUSTER",
+    page_icon="assets/logo1.png",
     layout="wide",
     initial_sidebar_state='expanded'
 )
 
+# === [PERUBAHAN] TAMBAHKAN BLOK KODE CSS INI ===
+# Ini adalah "hack" untuk membuat sidebar gelap secara paksa
+
+st.markdown("""
+<style>
+    /* Target sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #00427A !important; /* Biru Laut Gelap */
+    }
+
+    /* Target semua teks di dalam sidebar */
+    [data-testid="stSidebar"] div,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] p {
+        color: #FFFFFF !important; /* Paksa teks jadi putih */
+    }
+    
+    /* Target judul di sidebar (jika ada) */
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] h4 {
+        color: #E0F7FA !important; /* Teks judul jadi biru muda */
+    }
+
+    /* Target link/menu navigasi di sidebar */
+    [data-testid="stSidebar"] a {
+        color: #FFFFFF !important; /* Teks link jadi putih */
+    }
+
+    /* Target ikon panah expander di sidebar (jika ada) */
+    [data-testid="stSidebar"] .st-emotion-cache-16txtl3 {
+        color: #FFFFFF !importan;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# === AKHIR PERUBAHAN ===
+
 # --- Konten Halaman ---
-st.title("🌊🐟Pengelompokan dan Analisis Clustering Produksi Perikanan Tangkap Laut di Indonesia")
+col1, col2 = st.columns([1, 5], vertical_alignment="center")
+# 2. Masukkan gambar ke kolom pertama
+with col1:
+    st.image("assets/logo1.png", width=200)
+# 3. Masukkan judul ke kolom kedua
+with col2:
+    st.title("Pengelompokan dan Analisis Clustering Produksi Perikanan Tangkap Laut di Indonesia")
+# --- Selesai ---
 st.markdown("---")
 
 
