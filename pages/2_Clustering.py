@@ -1081,10 +1081,36 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
 
     # --- 6. EVALUASI KUALITAS ---
     st.subheader("⚙️ Evaluasi Kualitas Clustering")
+
+    # --- [BARU] Helper Functions for Indicators ---
+    # (Fungsi ini mendefinisikan indikator untuk setiap skor)
+    def get_silhouette_indicator(score):
+        if score > 0.7:
+            return "Sangat Baik (Struktur Kuat)"
+        elif score > 0.5:
+            return "Baik (Struktur Wajar)"
+        elif score > 0.25:
+            return "Cukup (Struktur Lemah)"
+        else:
+            return "Buruk (Struktur Tidak Ditemukan)"
+
+    def get_dbi_indicator(score):
+        if score < 0.5:
+            return "Sangat Baik (Cluster Terpisah Jelas)"
+        elif score < 0.8:
+            return "Baik (Cluster Cukup Terpisah)"
+        elif score < 1.2:
+            return "Cukup (Cluster Agak Tumpang Tindih)"
+        else:
+            return "Buruk (Cluster Sangat Tumpang Tindih)"
+    # ----------------------------------------------
+
     n_unique_clusters = df_valid[df_valid['Cluster'] != -1]['Cluster'].nunique() if 'Cluster' in df_valid else 0
 
-    # Inisialisasi fig_eval agar bisa di-handle di 'except'
+    # Inisialisasi figures
     fig_eval = None 
+    fig_sil_web = None
+    fig_pca_web = None
 
     if n_unique_clusters >= 2 and X_scaled is not None and labels is not None:
         valid_mask = labels != -1
@@ -1093,27 +1119,111 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
                 # --- [PERUBAHAN 1: Hitung Skor Dulu] ---
                 sil_score = silhouette_score(X_scaled[valid_mask], labels[valid_mask])
                 dbi_score = davies_bouldin_score(X_scaled[valid_mask], labels[valid_mask])
-
-                # === BLOK KODE UNTUK EXCEL SUDAH DIHAPUS ===
                 
-                # --- [PERUBAHAN 2: Buat Satu Figure Gabungan] ---
-                # Buat 1 baris, 2 kolom subplot. Ukuran (22, 9) agar lebar.
-                fig_eval, (ax_sil, ax_pca) = plt.subplots(1, 2, figsize=(22, 9))
-                
-                # --- Plot 1: Visualisasi Silhouette (di ax_sil) ---
+                # Hitung nilai-nilai plot (Satu kali saja agar efisien)
                 sample_silhouette_values = silhouette_samples(X_scaled[valid_mask], labels[valid_mask])
-                y_lower = 10
                 unique_labels_plot = np.unique(labels[valid_mask])
                 
+                # Hitung PCA (Satu kali saja agar efisien)
+                df_pca_all = None
+                try:
+                    pca_all = PCA(n_components=2)
+                    X2_all = pca_all.fit_transform(X_scaled)
+                    df_pca_all = pd.DataFrame(X2_all, columns=['PC1', 'PC2'])
+                    df_pca_all['Kategori'] = df_valid['Kategori'].values
+                except Exception as e_pca_init:
+                    st.warning(f"Gagal menginisialisasi PCA: {e_pca_init}")
+                    df_pca_all = None # Gagal membuat PCA
+                
+
+                # --- [BARU] Tampilkan Skor di Web (Sesuai Permintaan "Lama") ---
+                sil_indicator = get_silhouette_indicator(sil_score)
+                dbi_indicator = get_dbi_indicator(dbi_score)
+                
+                st.markdown("##### 📈 Hasil Metrik Evaluasi")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric(
+                        label="Silhouette Score", 
+                        value=f"{sil_score:.3f}", 
+                        help="Mengukur seberapa mirip data dengan clusternya sendiri dibandingkan dengan cluster lain. Rentang [-1, 1]."
+                    )
+                    # Tampilkan indikator di bawah metrik
+                    st.caption(f"**Indikator:** {sil_indicator}") 
+                with col2:
+                    st.metric(
+                        label="Davies-Bouldin Index", 
+                        value=f"{dbi_score:.3f}",
+                        help="Mengukur rata-rata 'kemiripan' antar cluster. Rentang [0, ∞]."
+                    )
+                    # Tampilkan indikator di bawah metrik
+                    st.caption(f"**Indikator:** {dbi_indicator}")
+                st.markdown("---") # Pemisah
+
+                # --- [BARU] Tampilkan Visualisasi Terpisah di Web ---
+                st.markdown("##### 📊 Visualisasi Hasil Clustering")
+                col_web_1, col_web_2 = st.columns(2)
+                
+                # --- Plot 1: Visualisasi Silhouette (untuk Web) ---
+                with col_web_1:
+                    # Buat figure baru khusus untuk web
+                    fig_sil_web, ax_sil_web = plt.subplots(figsize=(10, 8)) 
+                    y_lower = 10
+                    for i in unique_labels_plot:
+                        ith_cluster_silhouette_values = sample_silhouette_values[labels[valid_mask] == i]
+                        ith_cluster_silhouette_values.sort()
+                        size_cluster_i = ith_cluster_silhouette_values.shape[0]
+                        y_upper = y_lower + size_cluster_i
+                        color = cm.nipy_spectral(float(i) / n_unique_clusters)
+                        ax_sil_web.fill_betweenx(np.arange(y_lower, y_upper), 0, ith_cluster_silhouette_values, facecolor=color, edgecolor=color, alpha=0.7)
+                        ax_sil_web.text(-0.05, y_lower + 0.5 * size_cluster_i, str(i))
+                        y_lower = y_upper + 10
+                    
+                    ax_sil_web.set_title("Visualisasi Silhouette per Cluster", fontsize=16)
+                    ax_sil_web.set_xlabel("Nilai Koefisien Silhouette")
+                    ax_sil_web.set_ylabel("Label Cluster")
+                    ax_sil_web.axvline(x=sil_score, color="red", linestyle="--")
+                    ax_sil_web.set_yticks([])
+                    ax_sil_web.set_xticks([-0.1, 0, 0.2, 0.4, 0.6, 0.8, 1])
+                    st.pyplot(fig_sil_web)
+                    plt.close(fig_sil_web) # Tutup figure web setelah ditampilkan
+
+                # --- Plot 2: Plot PCA 2D (untuk Web) ---
+                with col_web_2:
+                    # Buat figure baru khusus untuk web
+                    fig_pca_web, ax_pca_web = plt.subplots(figsize=(10, 8))
+                    if df_pca_all is not None:
+                        sns.scatterplot(
+                            data=df_pca_all, x='PC1', y='PC2', hue='Kategori', 
+                            ax=ax_pca_web, palette=CATEGORY_COLORS, s=70, 
+                            style='Kategori', markers=True
+                        )
+                        ax_pca_web.set_xlabel("Principal Component 1")
+                        ax_pca_web.set_ylabel("Principal Component 2")
+                        ax_pca_web.set_title("Visualisasi Cluster 2D (PCA)", fontsize=16)
+                        ax_pca_web.legend(title="Kategori Cluster")
+                    else:
+                        ax_pca_web.text(0.5, 0.5, "Gagal membuat plot PCA.", ha='center', va='center', wrap=True)
+                    st.pyplot(fig_pca_web)
+                    plt.close(fig_pca_web) # Tutup figure web setelah ditampilkan
+
+                # --- [PERUBAHAN 2: Buat Satu Figure Gabungan UNTUK PDF] ---
+                # (Ini adalah TEPAT KODE LAMA ANDA, yang sekarang hanya untuk PDF)
+                # Kita 'menggambar ulang' plot di subplot yang berbeda
+                
+                fig_eval, (ax_sil, ax_pca) = plt.subplots(1, 2, figsize=(22, 9))
+                
+                # --- Plot 1: Visualisasi Silhouette (di ax_sil untuk PDF) ---
+                y_lower_pdf = 10
                 for i in unique_labels_plot:
                     ith_cluster_silhouette_values = sample_silhouette_values[labels[valid_mask] == i]
                     ith_cluster_silhouette_values.sort()
                     size_cluster_i = ith_cluster_silhouette_values.shape[0]
-                    y_upper = y_lower + size_cluster_i
+                    y_upper_pdf = y_lower_pdf + size_cluster_i
                     color = cm.nipy_spectral(float(i) / n_unique_clusters)
-                    ax_sil.fill_betweenx(np.arange(y_lower, y_upper), 0, ith_cluster_silhouette_values, facecolor=color, edgecolor=color, alpha=0.7)
-                    ax_sil.text(-0.05, y_lower + 0.5 * size_cluster_i, str(i))
-                    y_lower = y_upper + 10
+                    ax_sil.fill_betweenx(np.arange(y_lower_pdf, y_upper_pdf), 0, ith_cluster_silhouette_values, facecolor=color, edgecolor=color, alpha=0.7)
+                    ax_sil.text(-0.05, y_lower_pdf + 0.5 * size_cluster_i, str(i))
+                    y_lower_pdf = y_upper_pdf + 10
                 
                 ax_sil.set_title("Visualisasi Silhouette per Cluster", fontsize=16)
                 ax_sil.set_xlabel("Nilai Koefisien Silhouette")
@@ -1122,50 +1232,30 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
                 ax_sil.set_yticks([])
                 ax_sil.set_xticks([-0.1, 0, 0.2, 0.4, 0.6, 0.8, 1])
 
-                # --- Plot 2: Plot PCA 2D (di ax_pca) ---
-                try:
-                    # Gunakan PCA pada SEMUA data (X_scaled) agar konsisten
-                    pca_all = PCA(n_components=2)
-                    X2_all = pca_all.fit_transform(X_scaled)
-                    
-                    # Buat DataFrame PCA dari semua data
-                    df_pca_all = pd.DataFrame(X2_all, columns=['PC1', 'PC2'])
-                    
-                    # Tambahkan Kategori dari df_valid
-                    # (PENTING: pastikan df_valid.index sesuai dengan X_scaled)
-                    df_pca_all['Kategori'] = df_valid['Kategori'].values 
-                    
-                    # Plot semua data sekaligus dengan 'hue'
+                # --- Plot 2: Plot PCA 2D (di ax_pca untuk PDF) ---
+                if df_pca_all is not None:
                     sns.scatterplot(
-                        data=df_pca_all, 
-                        x='PC1', 
-                        y='PC2', 
-                        hue='Kategori', 
-                        ax=ax_pca, 
-                        palette=CATEGORY_COLORS, 
-                        s=70, 
-                        style='Kategori', 
-                        markers=True
+                        data=df_pca_all, x='PC1', y='PC2', hue='Kategori', 
+                        ax=ax_pca, palette=CATEGORY_COLORS, s=70, 
+                        style='Kategori', markers=True
                     )
-                    
                     ax_pca.set_xlabel("Principal Component 1")
                     ax_pca.set_ylabel("Principal Component 2")
                     ax_pca.set_title("Visualisasi Cluster 2D (PCA)", fontsize=16)
                     ax_pca.legend(title="Kategori Cluster")
-                
-                except Exception as e_pca:
-                    ax_pca.text(0.5, 0.5, f"Gagal membuat plot PCA:\n{e_pca}", ha='center', va='center', wrap=True)
+                else:
+                    ax_pca.text(0.5, 0.5, "Gagal membuat plot PCA.", ha='center', va='center', wrap=True)
 
-                # --- [PERUBAHAN 3: Tambahkan Judul Utama dan Skor ke Figure] ---
+                # --- [PERUBAHAN 3: Tambahkan Judul Utama dan Skor ke Figure PDF] ---
                 fig_eval.suptitle("Evaluasi Kualitas Clustering", fontsize=24, fontweight='bold')
-                # Tambahkan teks skor di bawah judul utama
-                skor_text = f"Silhouette Score: {sil_score:.3f} (Mendekati 1 lebih baik)   |   Davies-Bouldin Index: {dbi_score:.3f} (Mendekati 0 lebih baik)"
+                # (Menambahkan indikator ke teks skor PDF juga)
+                skor_text = f"Silhouette Score: {sil_score:.3f} ({sil_indicator})   |   Davies-Bouldin Index: {dbi_score:.3f} ({dbi_indicator})"
                 fig_eval.text(0.5, 0.93, skor_text, ha='center', va='top', fontsize=14)
                 
-                plt.tight_layout(rect=[0, 0.03, 1, 0.9]) # Sesuaikan layout agar judul tidak tumpang tindih
+                plt.tight_layout(rect=[0, 0.03, 1, 0.9]) 
                 
-                # Tampilkan SATU figure gabungan di Streamlit
-                st.pyplot(fig_eval)
+                # --- [PERUBAHAN 4: JANGAN Tampilkan fig_eval di Streamlit] ---
+                # st.pyplot(fig_eval) # <-- DI-COMMENT SESUAI PERMINTAAN
 
                 # Tambahkan SATU figure gabungan ini ke PDF
                 figures_for_pdf.append(fig_eval)
@@ -1173,10 +1263,14 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
 
             except ValueError as ve:
                 st.warning(f"Evaluasi clustering tidak dapat dihitung: {ve}")
-                if fig_eval: plt.close(fig_eval) # Tutup jika gagal
+                if fig_eval: plt.close(fig_eval) 
+                if fig_sil_web: plt.close(fig_sil_web)
+                if fig_pca_web: plt.close(fig_pca_web)
             except Exception as e_eval:
                 st.error(f"Terjadi kesalahan saat evaluasi: {e_eval}")
-                if fig_eval: plt.close(fig_eval) # Tutup jika gagal
+                if fig_eval: plt.close(fig_eval)
+                if fig_sil_web: plt.close(fig_sil_web)
+                if fig_pca_web: plt.close(fig_pca_web)
         else:
             st.warning("Evaluasi tidak dapat ditampilkan karena data valid kurang dari 2.")
     else:
