@@ -46,7 +46,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- Konten Halaman ---
-st.title("👨‍💻 Profil Saya")
+st.title("Profil Saya")
 st.markdown("---")
 
 # Mengatur layout menjadi dua kolom: satu untuk foto, satu untuk teks
@@ -70,9 +70,9 @@ with col2:
     st.write("**Universitas Tarumanagara**")    
     st.markdown("---")
     
-    st.write("📧 **Email**: RickyBong2902@gmail.com")
-    st.write("🔗 **LinkedIn**: https://www.linkedin.com/in/ricky-fernando-jf")
-    st.write("깃 **GitHub**: https://github.com/Ricky2902")
+    st.write("**Email**: RickyBong2902@gmail.com")
+    st.write("**LinkedIn**: https://www.linkedin.com/in/ricky-fernando-jf")
+    st.write("**GitHub**: https://github.com/Ricky2902")
 
 st.markdown("---")
 st.header("Tentang Proyek Ini")

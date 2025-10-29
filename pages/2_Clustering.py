@@ -377,7 +377,7 @@ with st.sidebar:
             if method in ['K-Means', 'BIRCH']:
                 params['n_clusters'] = st.slider('Jumlah Cluster (K):', min_value=2, max_value=7, value=3, help="Tentukan jumlah kelompok yang ingin dibentuk.")
             if method == 'OPTICS':
-                params['min_samples'] = st.slider('Minimum Points (MinPts):', min_value=5, max_value=15, value=5, help="Jumlah minimum tetangga...")
+                params['min_samples'] = st.slider('Minimum Points (MinPts):', min_value=5, max_value=15, value=8, help="Jumlah minimum tetangga...")
 
             with st.expander("Parameter Lanjutan (Opsional)"):
                 if method == 'BIRCH':
@@ -385,14 +385,14 @@ with st.sidebar:
                     params['threshold'] = st.number_input('Threshold:', min_value=0.1, max_value=1.0, value=0.1, step=0.1, help="Radius maksimum...")
                     params['branching_factor'] = st.number_input('Branching Factor:', min_value=2, max_value=100, value=50, help="Jumlah maksimum sub-cluster...")
                 if method == 'OPTICS':
-                    use_eps = st.checkbox("Tentukan Epsilon (eps) secara manual")
+                    use_eps = st.checkbox("Tentukan Epsilon (eps) secara manual ")
                     if use_eps:
                         # PERBAIKAN: Menggunakan keyword arguments
-                        params['eps'] = st.number_input('Epsilon (eps):', min_value=0.1, max_value=5.0, value=2.0, step=0.1, help="Jarak maksimum...")
+                        params['eps'] = st.number_input('Epsilon (eps):', min_value=0.01, max_value=1.0, value=0.5, step=0.01, help="Jarak maksimum...")
                     else:
-                        params['eps'] = None
+                        params['eps'] = np.inf
 
-            if st.button('🚀 Mulai Clustering'):
+            if st.button('Mulai Clustering'):
                 if not selected_features:
                     st.warning("Harap pilih setidaknya satu fitur untuk clustering.")
                 else:
@@ -402,7 +402,7 @@ with st.sidebar:
 # =================================================================================
 # AREA KONTEN UTAMA
 # =================================================================================
-st.title("📊 Dasbor Analisis Clustering Hasil Tangkapan Laut dan Konsumsi")
+st.title("Dasbor Analisis Clustering Hasil Tangkapan Laut dan Konsumsi")
 st.markdown("""
 Aplikasi ini memungkinkan Anda untuk melakukan analisis clustering pada data perikanan tangkap laut. Unggah dataset Anda, pilih metode dan parameter di sidebar, lalu klik **"Mulai Clustering"** untuk melihat hasilnya.
 """)
@@ -417,7 +417,7 @@ if os.path.exists(assets_path):
         if os.path.exists(template_path):
             try:
                 with open(template_path, "rb") as f:
-                    st.download_button(label="📄 Download Template Dataset", data=f.read(), file_name=template_file)
+                    st.download_button(label="📄 Download Dataset yang ada", data=f.read(), file_name=template_file)
             except Exception as e:
                 st.warning(f"Gagal memuat template: {e}")
         else:
@@ -640,7 +640,7 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
     st.markdown("---")
 
     # --- 3. GRAFIK JUMLAH ANGGOTA ---
-    st.subheader("📊 Jumlah Anggota per Kategori Cluster")
+    st.subheader("Jumlah Anggota per Kategori Cluster")
 
     # =================================================================
     # --- [PERUBAHAN] Inisialisasi fig_bar sebagai None ---
@@ -842,7 +842,7 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
 
 
     # --- 5. PETA ---
-    st.subheader("🗺️ Peta Sebaran dan Karakteristik Cluster")
+    st.subheader("Peta Sebaran dan Karakteristik Cluster")
     if "Latitude" in df_valid.columns and "Longitude" in df_valid.columns:
         df_map = df_valid.dropna(subset=['Latitude', 'Longitude'])
         if not df_map.empty:
@@ -965,7 +965,7 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
     st.markdown("---")
 
     # ===> AWAL BAGIAN INFO LANJUTAN WILAYAH (MULTI-SELECT, 2 KOLOM, INFO DETAIL) <===
-    st.subheader("ℹ️ Info Lanjutan Wilayah")
+    st.subheader("Info Lanjutan Wilayah")
 
     # Pastikan df_valid, feature_cols_used, dynamic_category_colors sudah ada dan benar
     if 'Wilayah' in df_valid.columns and 'Cluster' in df_valid.columns and 'Kategori' in df_valid.columns \
@@ -1116,6 +1116,10 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
         valid_mask = labels != -1
         if np.sum(valid_mask) >= 2:
             try:
+                # === [LOGIKA BARU] Cek jumlah fitur ===
+                num_features = X_scaled.shape[1]
+                # ======================================
+
                 # --- [PERUBAHAN 1: Hitung Skor Dulu] ---
                 sil_score = silhouette_score(X_scaled[valid_mask], labels[valid_mask])
                 dbi_score = davies_bouldin_score(X_scaled[valid_mask], labels[valid_mask])
@@ -1126,21 +1130,25 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
                 
                 # Hitung PCA (Satu kali saja agar efisien)
                 df_pca_all = None
-                try:
-                    pca_all = PCA(n_components=2)
-                    X2_all = pca_all.fit_transform(X_scaled)
-                    df_pca_all = pd.DataFrame(X2_all, columns=['PC1', 'PC2'])
-                    df_pca_all['Kategori'] = df_valid['Kategori'].values
-                except Exception as e_pca_init:
-                    st.warning(f"Gagal menginisialisasi PCA: {e_pca_init}")
-                    df_pca_all = None # Gagal membuat PCA
+                
+                # === [LOGIKA BARU] Hanya jalankan PCA jika fitur > 1 ===
+                if num_features > 1:
+                    try:
+                        pca_all = PCA(n_components=2)
+                        X2_all = pca_all.fit_transform(X_scaled)
+                        df_pca_all = pd.DataFrame(X2_all, columns=['PC1', 'PC2'])
+                        df_pca_all['Kategori'] = df_valid['Kategori'].values
+                    except Exception as e_pca_init:
+                        st.warning(f"Gagal menginisialisasi PCA: {e_pca_init}")
+                        df_pca_all = None # Gagal membuat PCA
+                # Jika num_features == 1, df_pca_all akan tetap None
                 
 
                 # --- [BARU] Tampilkan Skor di Web (Sesuai Permintaan "Lama") ---
                 sil_indicator = get_silhouette_indicator(sil_score)
                 dbi_indicator = get_dbi_indicator(dbi_score)
                 
-                st.markdown("##### 📈 Hasil Metrik Evaluasi")
+                st.markdown("##### Hasil Metrik Evaluasi")
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric(
@@ -1161,7 +1169,7 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
                 st.markdown("---") # Pemisah
 
                 # --- [BARU] Tampilkan Visualisasi Terpisah di Web ---
-                st.markdown("##### 📊 Visualisasi Hasil Clustering")
+                st.markdown("##### Visualisasi Hasil Clustering")
                 col_web_1, col_web_2 = st.columns(2)
                 
                 # --- Plot 1: Visualisasi Silhouette (untuk Web) ---
@@ -1192,7 +1200,10 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
                 with col_web_2:
                     # Buat figure baru khusus untuk web
                     fig_pca_web, ax_pca_web = plt.subplots(figsize=(10, 8))
+                    
+                    # === [LOGIKA BARU DENGAN 3 CABANG] ===
                     if df_pca_all is not None:
+                        # 1. SUKSES: Fitur > 1 dan PCA berhasil
                         sns.scatterplot(
                             data=df_pca_all, x='PC1', y='PC2', hue='Kategori', 
                             ax=ax_pca_web, palette=CATEGORY_COLORS, s=70, 
@@ -1202,14 +1213,23 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
                         ax_pca_web.set_ylabel("Principal Component 2")
                         ax_pca_web.set_title("Visualisasi Cluster 2D (PCA)", fontsize=16)
                         ax_pca_web.legend(title="Kategori Cluster")
+                    
+                    elif num_features == 1:
+                        # 2. KASUS 1 FITUR: Tampilkan pesan kustom
+                        ax_pca_web.text(0.5, 0.5, "Plot tidak ada karena hanya 1 fitur yang dipilih.", ha='center', va='center', wrap=True, fontsize=12)
+                        ax_pca_web.set_title("Visualisasi Cluster 2D (PCA)", fontsize=16)
+                        ax_pca_web.set_xticks([]) # Sembunyikan sumbu
+                        ax_pca_web.set_yticks([]) # Sembunyikan sumbu
+
                     else:
+                        # 3. GAGAL: Fitur > 1 tapi PCA error
                         ax_pca_web.text(0.5, 0.5, "Gagal membuat plot PCA.", ha='center', va='center', wrap=True)
+                        ax_pca_web.set_title("Visualisasi Cluster 2D (PCA)", fontsize=16)
+                    
                     st.pyplot(fig_pca_web)
                     plt.close(fig_pca_web) # Tutup figure web setelah ditampilkan
 
                 # --- [PERUBAHAN 2: Buat Satu Figure Gabungan UNTUK PDF] ---
-                # (Ini adalah TEPAT KODE LAMA ANDA, yang sekarang hanya untuk PDF)
-                # Kita 'menggambar ulang' plot di subplot yang berbeda
                 
                 fig_eval, (ax_sil, ax_pca) = plt.subplots(1, 2, figsize=(22, 9))
                 
@@ -1233,7 +1253,10 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
                 ax_sil.set_xticks([-0.1, 0, 0.2, 0.4, 0.6, 0.8, 1])
 
                 # --- Plot 2: Plot PCA 2D (di ax_pca untuk PDF) ---
+                
+                # === [LOGIKA BARU DENGAN 3 CABANG] ===
                 if df_pca_all is not None:
+                    # 1. SUKSES: Fitur > 1 dan PCA berhasil
                     sns.scatterplot(
                         data=df_pca_all, x='PC1', y='PC2', hue='Kategori', 
                         ax=ax_pca, palette=CATEGORY_COLORS, s=70, 
@@ -1243,13 +1266,23 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
                     ax_pca.set_ylabel("Principal Component 2")
                     ax_pca.set_title("Visualisasi Cluster 2D (PCA)", fontsize=16)
                     ax_pca.legend(title="Kategori Cluster")
+                
+                elif num_features == 1:
+                    # 2. KASUS 1 FITUR: Tampilkan pesan kustom
+                    ax_pca.text(0.5, 0.5, "Plot tidak ada karena hanya 1 fitur yang dipilih.", ha='center', va='center', wrap=True, fontsize=12)
+                    ax_pca.set_title("Visualisasi Cluster 2D (PCA)", fontsize=16)
+                    ax_pca.set_xticks([]) # Sembunyikan sumbu
+                    ax_pca.set_yticks([]) # Sembunyikan sumbu
+                
                 else:
+                    # 3. GAGAL: Fitur > 1 tapi PCA error
                     ax_pca.text(0.5, 0.5, "Gagal membuat plot PCA.", ha='center', va='center', wrap=True)
+                    ax_pca.set_title("Visualisasi Cluster 2D (PCA)", fontsize=16)
 
                 # --- [PERUBAHAN 3: Tambahkan Judul Utama dan Skor ke Figure PDF] ---
                 fig_eval.suptitle("Evaluasi Kualitas Clustering", fontsize=24, fontweight='bold')
                 # (Menambahkan indikator ke teks skor PDF juga)
-                skor_text = f"Silhouette Score: {sil_score:.3f} ({sil_indicator})   |   Davies-Bouldin Index: {dbi_score:.3f} ({dbi_indicator})"
+                skor_text = f"Silhouette Score: {sil_score:.3f} ({sil_indicator})   |   Davies-Bouldin Index: {dbi_score:.3f} ({dbi_indicator})"
                 fig_eval.text(0.5, 0.93, skor_text, ha='center', va='top', fontsize=14)
                 
                 plt.tight_layout(rect=[0, 0.03, 1, 0.9]) 
@@ -1277,7 +1310,6 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
         st.warning("Evaluasi tidak dapat ditampilkan karena hanya 1 cluster yang terbentuk.")
 
     st.markdown("---")
-
     # === [PERUBAHAN] BUAT COVER PAGE UNTUK PDF ===
     # (Letakkan ini TEPAT SEBELUM Tombol Download PDF Anda)
 
@@ -1433,6 +1465,6 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
         st.warning("Tidak ada fitur tersedia untuk menampilkan peringkat.")
 
 else:
-    st.info("👋 Selamat datang! Silakan upload file Excel Anda di sidebar untuk memulai analisis.")
+    st.info("Selamat datang! Silakan upload file Excel Anda di sidebar untuk memulai analisis.")
     if 'results_ready' in st.session_state:
         del st.session_state.results_ready
