@@ -417,7 +417,7 @@ if os.path.exists(assets_path):
         if os.path.exists(template_path):
             try:
                 with open(template_path, "rb") as f:
-                    st.download_button(label="📄 Download Dataset yang ada", data=f.read(), file_name=template_file)
+                    st.download_button(label="📄 Download Template Dataset", data=f.read(), file_name=template_file)
             except Exception as e:
                 st.warning(f"Gagal memuat template: {e}")
         else:
@@ -428,7 +428,7 @@ if os.path.exists(assets_path):
         if os.path.exists(dataset_path):
             try:
                 with open(dataset_path, "rb") as f:
-                    st.download_button(label="💾 Download Contoh Dataset", data=f.read(), file_name="dataset_Tangkap_Laut_Dan_Konsumsi.xlsx")
+                    st.download_button(label="💾 Download Dataset Perikanan", data=f.read(), file_name="dataset_Tangkap_Laut_Dan_Konsumsi.xlsx")
             except Exception as e:
                 st.warning(f"Gagal memuat contoh dataset: {e}")
         else:
