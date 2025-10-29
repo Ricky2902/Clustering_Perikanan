@@ -18,6 +18,7 @@ import re
 from openpyxl.drawing.image import Image as OpenpyxlImage
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from PIL import Image
 from datetime import datetime
 
@@ -198,83 +199,102 @@ def create_multi_page_pdf(figures_list, pdf_file_name="report.pdf"):
     pdf_buffer.seek(0)
     return pdf_buffer
 
-# Fungsi helper baru untuk "memfoto" peta folium
 def get_folium_map_as_figure(map_object):
     """
     Menyimpan objek Peta Folium sebagai file HTML sementara,
     merendernya dengan Selenium, mengambil screenshot, 
     dan mengembalikannya sebagai objek Figure Matplotlib.
     
-    PENTING: Membutuhkan instalasi:
-    pip install selenium webdriver-manager pillow
-    
-    Dan Google Chrome harus terinstal di mesin.
+    PENTING: Dikonfigurasi untuk Streamlit Cloud (membutuhkan packages.txt)
     """
     
-    # 1. Simpan peta ke file HTML sementara
+    # === [PERBAIKAN 1] ===
+    # Logika penyimpanan file HTML yang hilang ditambahkan di sini.
+    # Ini harus terjadi SEBELUM driver dimulai.
     temp_html = "temp_map_for_pdf.html"
-    map_object.save(temp_html)
-    
-    # 2. Dapatkan path absolut untuk browser
-    full_path = 'file://' + os.path.abspath(temp_html)
+    try:
+        # 1. Simpan peta ke file HTML sementara
+        map_object.save(temp_html)
+        # 2. Dapatkan path absolut untuk browser
+        full_path = 'file://' + os.path.abspath(temp_html)
+    except Exception as e:
+        st.error(f"Gagal menyimpan peta sementara ke HTML: {e}")
+        if os.path.exists(temp_html):
+             os.remove(temp_html)
+        return None
+    # ======================
 
-    # 3. Siapkan opsi browser (headless = tanpa membuka jendela)
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    # Atur ukuran jendela yang cukup besar untuk peta Anda
-    options.add_argument('--window-size=1000,700') 
+    # 1. Siapkan semua options
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1000,700")
+
+    # 2. Tentukan path driver secara EKSPLISIT
+    service = Service(executable_path="/usr/bin/chromedriver")
     
     driver = None
+    png_data = None # Inisialisasi png_data di luar try
+
+    # === [PERBAIKAN 2] ===
+    # Struktur try-except-finally DIROMBAK TOTAL agar logis.
+    
+    # --- Blok 1: Coba Mulai Driver ---
     try:
-        # === PERUBAHAN DI SINI ===
-        # Biarkan Service() kosong. Selenium akan otomatis
-        # mengunduh driver yang TEPAT (v141).
-        service = Service() 
-        # =========================
-        
+        # 3. Pastikan Anda memasukkan KEDUA argumen: 
         driver = webdriver.Chrome(service=service, options=options)
+        
+        # st.write("Driver berhasil...") <-- Dihapus agar tidak mengganggu UI
+    
     except Exception as e:
+        # Ini adalah 'except' untuk 'try' di atas
         st.error(f"Gagal memulai Selenium/WebDriver: {e}")
-        st.error("Pastikan Google Chrome terinstal. Coba restart aplikasi setelah instalasi.")
+        st.error("Ini sering terjadi jika file 'packages.txt' Anda salah atau hilang.")
         if os.path.exists(temp_html):
              os.remove(temp_html)
         return None
 
+    # --- Blok 2: Coba Ambil Screenshot (HANYA JIKA DRIVER BERHASIL) ---
     try:
         # 5. Ambil screenshot
         driver.get(full_path)
         # Beri waktu (detik) agar peta selesai di-render
-        time.sleep(1.5) 
+        time.sleep(2) 
         
         png_data = driver.get_screenshot_as_png()
         
     except Exception as e:
         st.error(f"Gagal mengambil screenshot peta: {e}")
-        return None
+        # png_data akan tetap None
         
     finally:
         # 6. Selalu tutup driver dan hapus file sementara
+        # Ini akan berjalan baik jika 'try' berhasil maupun gagal
         if driver:
             driver.quit()
         if os.path.exists(temp_html):
             os.remove(temp_html)
-
-    # 7. Konversi screenshot (PNG) ke Figure Matplotlib
-    try:
-        img = Image.open(BytesIO(png_data))
-        
-        # Buat figure matplotlib untuk menampung gambar
-        # Sesuaikan figsize agar proporsional (10:7)
-        fig_map, ax_map = plt.subplots(figsize=(20, 15)) 
-        ax_map.imshow(img)
-        ax_map.axis('off') # Sembunyikan sumbu X/Y
-        
-        return fig_map
-        
-    except Exception as e:
-        st.error(f"Gagal mengkonversi screenshot peta ke figure: {e}")
+            
+    # --- Blok 3: Konversi Gambar (HANYA JIKA SCREENSHOT BERHASIL) ---
+    if png_data:
+        try:
+            # 7. Konversi screenshot (PNG) ke Figure Matplotlib
+            img = Image.open(BytesIO(png_data))
+            
+            fig_map, ax_map = plt.subplots(figsize=(20, 15)) 
+            ax_map.imshow(img)
+            ax_map.axis('off') # Sembunyikan sumbu X/Y
+            
+            return fig_map
+            
+        except Exception as e:
+            st.error(f"Gagal mengkonversi screenshot peta ke figure: {e}")
+            return None
+    else:
+        # Jika png_data masih None (karena screenshot gagal)
+        st.warning("Tidak ada data gambar yang berhasil diambil.")
         return None
 # =================================================================================
 # PENGATURAN HALAMAN DAN "MEMORI" (SESSION STATE)
