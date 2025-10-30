@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .DS_Store
 .env
+# Abaikan file peta sementara untuk PDF
+temp_map_for_pdf.htmlS

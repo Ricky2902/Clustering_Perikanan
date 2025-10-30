@@ -377,7 +377,7 @@ with st.sidebar:
             if method in ['K-Means', 'BIRCH']:
                 params['n_clusters'] = st.slider('Jumlah Cluster (K):', min_value=2, max_value=7, value=3, help="Tentukan jumlah kelompok yang ingin dibentuk.")
             if method == 'OPTICS':
-                params['min_samples'] = st.slider('Minimum Points (MinPts):', min_value=5, max_value=15, value=8, help="Jumlah minimum tetangga...")
+                params['min_samples'] = st.slider('Minimum Points (MinPts):', min_value=5, max_value=50, value=8, help="Jumlah minimum tetangga, Aturan praktis: 2 * jumlah fitur. Naikkan jika hasil 'Range Tahun'")
 
             with st.expander("Parameter Lanjutan (Opsional)"):
                 if method == 'BIRCH':
@@ -385,12 +385,14 @@ with st.sidebar:
                     params['threshold'] = st.number_input('Threshold:', min_value=0.1, max_value=1.0, value=0.1, step=0.1, help="Radius maksimum...")
                     params['branching_factor'] = st.number_input('Branching Factor:', min_value=2, max_value=100, value=50, help="Jumlah maksimum sub-cluster...")
                 if method == 'OPTICS':
-                    use_eps = st.checkbox("Tentukan Epsilon (eps) secara manual ")
-                    if use_eps:
-                        # PERBAIKAN: Menggunakan keyword arguments
-                        params['eps'] = st.number_input('Epsilon (eps):', min_value=0.01, max_value=1.0, value=0.5, step=0.01, help="Jarak maksimum...")
-                    else:
-                        params['eps'] = np.inf
+                    params['xi'] = st.slider('Xi (Sensitivitas Cluster):', 
+                        min_value=0.01, max_value=0.1, value=0.01, step=0.01,
+                        help="Nilai 0.05 (5%) adalah default yang baik. Turunkan (mis: 0.01) untuk mendeteksi lebih banyak cluster kecil.")
+                    
+                    # 4. Min Cluster Size (Opsional Baru)
+                    params['min_cluster_size'] = st.number_input('Ukuran Cluster Minimum:', 
+                        min_value=2, max_value=50, value=5, step=1,
+                         help="Jumlah minimum data untuk membentuk satu cluster. Mengabaikan kelompok yang lebih kecil dari ini.")
 
             if st.button('Mulai Clustering'):
                 if not selected_features:
@@ -457,88 +459,119 @@ if uploaded_file:
         st.error(f"Gagal membaca file Excel: {e}")
         st.stop()
 
-    if st.session_state.run_clustering:
-        with st.spinner('⏳ Sedang memproses clustering... Harap tunggu...'):
-            try:
-                if not selected_features:
-                    st.error("❌ Harap pilih minimal satu fitur di sidebar untuk memulai analisis."); st.stop()
+if st.session_state.run_clustering:
+    with st.spinner('⏳ Sedang memproses clustering... Harap tunggu...'):
+        try:
+            if not selected_features:
+                st.error("❌ Harap pilih minimal satu fitur di sidebar untuk memulai analisis."); st.stop()
 
-                feature_cols = []
-                df_process = df_raw.copy()
+            feature_cols = []
+            df_process = df_raw.copy()
 
-                if mode == 'Range Tahun':
-                    if year_range is None:
-                         st.error("Rentang tahun tidak terpilih untuk mode 'Range Tahun'."); st.stop()
-                    start_year, end_year = int(year_range[0]), int(year_range[1])
-                    years_in_range = list(range(start_year, end_year + 1))
+            # === [PERUBAHAN LOGIKA DIMULAI DI SINI] ===
+            if mode == 'Range Tahun':
+                if year_range is None:
+                    st.error("Rentang tahun tidak terpilih untuk mode 'Range Tahun'."); st.stop()
+                start_year, end_year = int(year_range[0]), int(year_range[1])
+                years_in_range = list(range(start_year, end_year + 1))
 
-                    for feature in selected_features:
-                        cols_yearly = [f"{feature}_{y}" for y in years_in_range if f"{feature}_{y}" in df_process.columns]
-                        if cols_yearly:
-                            avg_col_name = f"{feature}_Avg"
-                            df_process[avg_col_name] = df_process[cols_yearly].apply(pd.to_numeric, errors='coerce').mean(axis=1)
-                            feature_cols.append(avg_col_name)
-
-                else: # Mode Per Tahun
-                    if year is None:
-                        st.error("Tahun tidak terpilih untuk mode 'Per Tahun'."); st.stop()
-                    for feature in selected_features:
-                        col_name_yearly = f"{feature}_{year}"
+                # Logika LAMA (Menghitung Rata-rata) DIHAPUS.
+                #
+                # Logika BARU (Menggabungkan Semua Fitur):
+                # Kita mengumpulkan SEMUA kolom per tahun, bukan rata-ratanya.
+                for feature in selected_features:
+                    for y in years_in_range:
+                        col_name_yearly = f"{feature}_{y}"
                         if col_name_yearly in df_process.columns:
                             feature_cols.append(col_name_yearly)
-
-                if not feature_cols:
-                    st.error(f'❌ Tidak ada kolom fitur yang cocok ditemukan.'); st.stop()
-
-                X_df = df_process[feature_cols].apply(pd.to_numeric, errors='coerce')
-                mask_valid_rows = X_df.dropna().index
+                        # (Anda bisa tambahkan st.warning di sini jika kolom tidak ada)
                 
-                min_samples_needed = params.get('n_clusters', 2) if method != 'OPTICS' else params.get('min_samples', 2)
-                if len(mask_valid_rows) < min_samples_needed:
-                    st.error(f"❌ Data valid ({len(mask_valid_rows)} baris) tidak cukup untuk clustering (membutuhkan min. {min_samples_needed})."); st.stop()
+                # 'feature_cols' sekarang akan berisi:
+                # ['Produksi_2019', 'Produksi_2020', ..., 'Nilai_2023']
 
-                df_valid = df_process.loc[mask_valid_rows].reset_index(drop=True)
-                X_valid = X_df.loc[mask_valid_rows].reset_index(drop=True)
+            # === [AKHIR PERUBAHAN LOGIKA] ===
 
-                scaler = MinMaxScaler()
-                X_scaled = scaler.fit_transform(X_valid)
+            else: # Mode Per Tahun (Logika ini tetap sama)
+                if year is None:
+                    st.error("Tahun tidak terpilih untuk mode 'Per Tahun'."); st.stop()
+                for feature in selected_features:
+                    col_name_yearly = f"{feature}_{year}"
+                    if col_name_yearly in df_process.columns:
+                        feature_cols.append(col_name_yearly)
 
-                model = initialize_clustering_model(method, params)
-                if model is None:
-                    st.error(f"Metode clustering '{method}' tidak dikenali."); st.stop()
+            if not feature_cols:
+                st.error(f'❌ Tidak ada kolom fitur yang cocok ditemukan.'); st.stop()
+
+            X_df = df_process[feature_cols].apply(pd.to_numeric, errors='coerce')
+            
+            # .dropna() di sini sekarang akan bekerja persis seperti di notebook
+            # (menghapus baris yang datanya hilang di TAHUN APAPUN)
+            mask_valid_rows = X_df.dropna().index
+            
+            min_samples_needed = params.get('n_clusters', 2) if method != 'OPTICS' else params.get('min_samples', 2)
+            if len(mask_valid_rows) < min_samples_needed:
+                st.error(f"❌ Data valid ({len(mask_valid_rows)} baris) tidak cukup untuk clustering (membutuhkan min. {min_samples_needed})."); st.stop()
+
+            df_valid = df_process.loc[mask_valid_rows].reset_index(drop=True)
+            X_valid = X_df.loc[mask_valid_rows].reset_index(drop=True)
+
+            scaler = MinMaxScaler()
+            X_scaled = scaler.fit_transform(X_valid)
+
+            # === [SARAN PENTING UNTUK OPTICS] ===
+            # Parameter 'MinPts' dari sidebar (cth: 5) mungkin terlalu kecil 
+            # untuk data dimensi tinggi (cth: 25 fitur).
+            # Kita bisa menimpanya secara paksa di sini agar hasilnya bagus.
+            
+            num_dimensions = X_scaled.shape[1] # Cek jumlah fitur (mis: 25)
+            
+            if mode == 'Range Tahun' and method == 'OPTICS' and num_dimensions > 10:
+                # Aturan praktis: MinPts = 2 * Dimensi
+                saran_min_pts = 2 * num_dimensions 
                 
-                model.fit(X_scaled)
-                labels = getattr(model, "labels_", np.array([-1] * len(X_scaled)))
+                # Cek apakah nilai sidebar (params) terlalu kecil
+                if params.get('min_samples', 5) < saran_min_pts:
+                    st.warning(f"Data dimensi tinggi ({num_dimensions} fitur) terdeteksi. "
+                               f"Menggunakan MinPts = {saran_min_pts} (mengabaikan nilai sidebar).")
+                    params['min_samples'] = saran_min_pts
+            # ========================================
 
-                df_valid["Cluster"] = labels
-                df_valid = categorize_clusters(df_valid)
-                
-                if 'Kategori' not in df_valid.columns:
-                    df_valid['Kategori'] = 'Cluster ' + df_valid['Cluster'].astype(str)
-                    df_valid['Kategori'] = df_valid['Kategori'].replace('Cluster -1', 'Outlier')
+            model = initialize_clustering_model(method, params)
+            if model is None:
+                st.error(f"Metode clustering '{method}' tidak dikenali."); st.stop()
+            
+            model.fit(X_scaled)
+            labels = getattr(model, "labels_", np.array([-1] * len(X_scaled)))
+
+            df_valid["Cluster"] = labels
+            df_valid = categorize_clusters(df_valid)
+            
+            if 'Kategori' not in df_valid.columns:
+                df_valid['Kategori'] = 'Cluster ' + df_valid['Cluster'].astype(str)
+                df_valid['Kategori'] = df_valid['Kategori'].replace('Cluster -1', 'Outlier')
 
 
-                st.session_state.results['df_valid'] = df_valid
-                st.session_state.results['df_raw'] = df_raw
-                st.session_state.results['X_scaled'] = X_scaled
-                st.session_state.results['labels'] = labels
-                st.session_state.results['mode'] = mode
-                st.session_state.results['year'] = year
-                st.session_state.results['year_range'] = year_range
-                st.session_state.results['selected_features_info'] = selected_features
-                st.session_state.results['feature_cols_used'] = feature_cols
-                st.session_state.results['available_features'] = available_features
+            st.session_state.results['df_valid'] = df_valid
+            st.session_state.results['df_raw'] = df_raw
+            st.session_state.results['X_scaled'] = X_scaled
+            st.session_state.results['labels'] = labels
+            st.session_state.results['mode'] = mode
+            st.session_state.results['year'] = year
+            st.session_state.results['year_range'] = year_range
+            st.session_state.results['selected_features_info'] = selected_features
+            st.session_state.results['feature_cols_used'] = feature_cols
+            st.session_state.results['available_features'] = available_features
 
-                st.session_state.run_clustering = False
-                st.session_state.results_ready = True
-                st.success("✅ Clustering selesai!")
-                time.sleep(1)
-                st.rerun()
+            st.session_state.run_clustering = False
+            st.session_state.results_ready = True
+            st.success("✅ Clustering selesai!")
+            time.sleep(1)
+            st.rerun()
 
-            except Exception as e:
-                st.error(f"Terjadi kesalahan saat proses clustering: {e}")
-                st.exception(e)
-                st.session_state.run_clustering = False
+        except Exception as e:
+            st.error(f"Terjadi kesalahan saat proses clustering: {e}")
+            st.exception(e)
+            st.session_state.run_clustering = False
 
 if 'results_ready' in st.session_state and st.session_state.results_ready:
     df_valid = st.session_state.results.get('df_valid')

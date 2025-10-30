@@ -44,7 +44,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- Konten Halaman ---
-st.title("ℹPusat Informasi")
+st.title("Pusat Informasi")
 st.write("Temukan jawaban atas pertanyaan umum mengenai aplikasi, data, dan metode yang digunakan di bawah ini.")
 st.markdown("---")
 

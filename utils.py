@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sklearn.cluster import KMeans, Birch, OPTICS
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -68,8 +69,16 @@ def initialize_clustering_model(method, params):
         )
     if method == 'OPTICS':
         return OPTICS(
-            min_samples=params.get('min_samples', 5),
-            eps=params.get('eps', None) 
+            # Ambil nilai MinPts dari params (didefinisikan di sidebar)
+            min_samples=params.get('min_samples', 8), 
+            
+            # --- Perubahan Kunci ---
+            eps=np.inf,  # <-- PENTING: Epsilon di-hardcode (selalu tak terhingga)
+            cluster_method='xi', # <-- PENTING: Memberitahu OPTICS untuk menggunakan Xi
+            
+            # Ambil nilai opsional baru dari params
+            xi=params.get('xi', 0.05), 
+            min_cluster_size=params.get('min_cluster_size', 5) 
         )
     return None
 
