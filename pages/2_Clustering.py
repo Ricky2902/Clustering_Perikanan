@@ -250,8 +250,6 @@ def get_folium_map_as_figure(map_object):
     
     except Exception as e:
         # Ini adalah 'except' untuk 'try' di atas
-        st.error(f"Gagal memulai Selenium/WebDriver: {e}")
-        st.error("Ini sering terjadi jika file 'packages.txt' Anda salah atau hilang.")
         if os.path.exists(temp_html):
              os.remove(temp_html)
         return None
@@ -341,7 +339,7 @@ with st.sidebar:
                     help="Pilih satu atau lebih fitur yang akan digunakan sebagai dasar pengelompokan."
                 )
             else:
-                st.warning("Tidak ada kolom fitur berformat 'NamaFitur_Tahun' yang ditemukan di file Anda.")
+                st.warning("Tidak ada kolom fitur berformat 'NamaFitur_Tahun' yang ditemukan di file Anda. Tolong Upload FIle yang Benar")
 
             years_available = set()
             for col in df_temp.columns:
@@ -354,7 +352,7 @@ with st.sidebar:
             years_available = sorted(list(years_available))
 
             if not years_available:
-                st.warning("Tidak ada kolom berformat _YYYY yang valid ditemukan.")
+                st.warning("Tidak ada kolom berformat _YYYY yang valid ditemukan. Tolong Upload FIle yang Benar")
             else:
                 if mode == 'Per Tahun':
                     year = st.selectbox('Pilih Tahun:', years_available, help="Pilih tahun untuk analisis per tahun.")
@@ -394,12 +392,20 @@ with st.sidebar:
                         min_value=2, max_value=50, value=5, step=1,
                          help="Jumlah minimum data untuk membentuk satu cluster. Mengabaikan kelompok yang lebih kecil dari ini.")
 
-            if st.button('Mulai Clustering'):
+
+        
+            if st.button('🚀 Mulai Clustering'):
                 if not selected_features:
                     st.warning("Harap pilih setidaknya satu fitur untuk clustering.")
                 else:
-                    st.session_state.run_clustering = True
-                    st.session_state.results = {}
+                    st.session_state.run_clustering = True # 1. Beritahu script untuk mulai
+                    st.session_state.results = {}         # 2. Kosongkan data hasil lama
+                    
+                    # === [INI ADALAH PERUBAHAN KUNCI] ===
+                    # 3. Hapus status 'siap' agar hasil lama tidak dirender
+                    if 'results_ready' in st.session_state:
+                        st.session_state.results_ready = False
+                    # ===================================
 
 # =================================================================================
 # AREA KONTEN UTAMA
@@ -430,18 +436,18 @@ if os.path.exists(assets_path):
         if os.path.exists(dataset_path):
             try:
                 with open(dataset_path, "rb") as f:
-                    st.download_button(label="💾 Download Dataset Perikanan", data=f.read(), file_name="dataset_Tangkap_Laut_Dan_Konsumsi.xlsx")
+                    st.download_button(label="💾 Download Dataset Perikanan", data=f.read(), file_name="dataset_Tangkap_Laut_Dan_Konsumsi_2019-2023.xlsx")
             except Exception as e:
                 st.warning(f"Gagal memuat contoh dataset: {e}")
         else:
             st.caption("Contoh dataset tidak ditemukan.")
     with col3:
-        guide_file = "Buku_panduan.pptx"
+        guide_file = "Manual_Book_Clustering_Perikanan_535220059.pdf"
         guide_path = os.path.join(assets_path, guide_file)
         if os.path.exists(guide_path):
             try:
                 with open(guide_path, "rb") as f:
-                    st.download_button(label="📘 Download Buku Panduan", data=f.read(), file_name=guide_file)
+                    st.download_button(label="📘 Download Buku Panduan", data=f.read(), file_name="Manual_Book_Fishery_Cluster.pdf")
             except Exception as e:
                 st.warning(f"Gagal memuat panduan: {e}")
         else:
@@ -991,9 +997,9 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
             except Exception as e: 
                 st.warning(f"Legenda peta tidak dapat ditampilkan: {e}")
         else: 
-            st.warning("Data tidak memiliki nilai Latitude/Longitude yang valid.")
+            st.warning("Data tidak memiliki nilai Latitude/Longitude yang valid. Peta tidak dapat ditampilkan.")
     else: 
-        st.warning("Kolom 'Latitude' dan 'Longitude' tidak ditemukan.")
+        st.warning("Kolom 'Latitude' dan 'Longitude' tidak ditemukan. Peta tidak dapat ditampilkan.")
 
     st.markdown("---")
 
@@ -1383,99 +1389,112 @@ if 'results_ready' in st.session_state and st.session_state.results_ready:
         st.markdown("---")
 
     # --- 7. TREND TAHUNAN ---
-    # ========== TREND SECTION (URUTAN DIUBAH: FITUR DULU BARU JUMLAH) ==========
-    st.subheader("📈 Tren Tahunan Lokasi Teratas") # Judul umum
+    # ========== [PERUBAHAN] Hanya tampilkan jika mode 'Range Tahun' ==========
+    if result_mode == 'Range Tahun':
+        
+        st.subheader("📈 Tren Tahunan Lokasi Teratas") # Judul umum
 
-    # --- Tentukan opsi fitur (sama seperti sebelumnya) ---
-    trend_options = available_features if available_features else (FEATURE_PRODUKSI if 'FEATURE_PRODUKSI' in locals() else [])
+        # --- [PERUBAHAN] Opsi fitur sekarang adalah fitur yang DIPILIH user ---
+        trend_options = selected_features_info 
+        # (Mengganti 'available_features' dengan 'selected_features_info')
 
-    if trend_options:
-        # --- 1. Pilih Fitur untuk Tren ---
-        # Beri key berbeda tergantung mode agar selectbox tidak konflik
-        selectbox_key = 'trend_feature_range_v2' if result_mode == 'Range Tahun' else 'trend_feature_pertahun_v2' # Update key
-        selected_feature_trend = st.selectbox(f"Pilih Fitur untuk Tren ({result_mode}):", trend_options, key=selectbox_key)
+        if trend_options:
+            # --- 1. Pilih Fitur untuk Tren ---
+            
+            # [PERUBAHAN] Key dan label disederhanakan karena 'Per Tahun' dihapus
+            selectbox_key = 'trend_feature_range_only_v2' 
+            selected_feature_trend = st.selectbox(
+                "Pilih Fitur untuk Tren:", 
+                trend_options, 
+                key=selectbox_key,
+                help="Hanya fitur yang Anda pilih untuk analisis clustering yang ditampilkan di sini."
+            )
 
-        # --- 2. Slider untuk memilih jumlah lokasi (setelah fitur dipilih) ---
-        n_top_trend = st.slider("Jumlah Lokasi untuk Tren:", min_value=5, max_value=20, value=10, key='n_top_trend_slider_v2') # Update key
+            # --- 2. Slider untuk memilih jumlah lokasi (tetap sama) ---
+            n_top_trend = st.slider("Jumlah Lokasi untuk Tren:", min_value=5, max_value=20, value=10, key='n_top_trend_slider_v2') 
 
-        # --- 3. Logika Pengumpulan Data Tren (sama, tapi pakai n_top_trend) ---
-        trend_cols_with_year = []
-        start_year_trend, end_year_trend = None, None
+            # --- 3. Logika Pengumpulan Data Tren ---
+            trend_cols_with_year = []
+            start_year_trend, end_year_trend = None, None
 
-        if result_mode == 'Range Tahun':
+            # [PERUBAHAN] Blok 'else: # Mode Per Tahun' DIHAPUS
+            
             year_range_trend = st.session_state.results.get('year_range')
             if year_range_trend:
-                 start_year_trend, end_year_trend = int(year_range_trend[0]), int(year_range_trend[1])
+                start_year_trend, end_year_trend = int(year_range_trend[0]), int(year_range_trend[1])
             else: # Fallback
-                 years_available_trend = sorted(list(set(int(y) for c in df_raw.columns if (m:=re.search(r'_(\d{4})$',c)) and (y:=m.group(1)).isdigit() )))
-                 if years_available_trend: start_year_trend, end_year_trend = years_available_trend[0], years_available_trend[-1]
+                # Logika ini mencari semua tahun yang ada di file mentah
+                years_available_trend = sorted(list(set(int(y) for c in df_raw.columns if (m:=re.search(r'_(\d{4})$',c)) and (y:=m.group(1)).isdigit() )))
+                if years_available_trend: start_year_trend, end_year_trend = years_available_trend[0], years_available_trend[-1]
 
             if start_year_trend is not None and end_year_trend is not None:
+                # Cari kolom yang cocok (cth: 'Produksi_2019', 'Produksi_2020', ...)
                 for c in sorted(df_raw.columns):
                     m_trend = re.match(rf'{re.escape(selected_feature_trend)}_(\d{{4}})$', c, flags=re.IGNORECASE)
                     if m_trend:
                         try:
                             y_trend = int(m_trend.group(1))
-                            if start_year_trend <= y_trend <= end_year_trend: trend_cols_with_year.append((y_trend, c))
+                            if start_year_trend <= y_trend <= end_year_trend: 
+                                trend_cols_with_year.append((y_trend, c))
                         except ValueError: pass
-        else: # Mode Per Tahun
-             for c in sorted(df_raw.columns):
-                 m_trend = re.match(rf'{re.escape(selected_feature_trend)}_(\d{{4}})$', c, flags=re.IGNORECASE)
-                 if m_trend:
-                     try: trend_cols_with_year.append((int(m_trend.group(1)), c))
-                     except ValueError: pass
-             if trend_cols_with_year:
-                 all_years_found = [y for y, c in trend_cols_with_year]
-                 start_year_trend, end_year_trend = min(all_years_found), max(all_years_found)
+            
+            # --- 4. Plotting Tren ---
+            trend_cols_with_year.sort()
+            trend_cols = [c for y, c in trend_cols_with_year]
 
+            if trend_cols:
+                try:
+                    # Cari 'average_trend' berdasarkan kolom yang ditemukan
+                    df_raw['average_trend'] = df_raw[trend_cols].apply(pd.to_numeric, errors='coerce').mean(axis=1).fillna(0)
+                    df_top_trend = df_raw.nlargest(n_top_trend, 'average_trend')
+                    years_trend_plot = [y for y, c in trend_cols_with_year]
 
-        trend_cols_with_year.sort()
-        trend_cols = [c for y, c in trend_cols_with_year]
+                    fig_trend, ax_trend = plt.subplots(figsize=(12, 7))
+                    for _, row in df_top_trend.iterrows():
+                        trend_values = row[trend_cols].apply(pd.to_numeric, errors='coerce')
+                        if not trend_values.isnull().all(): 
+                            ax_trend.plot(years_trend_plot, trend_values, marker='o', linestyle='-', label=row.get('Wilayah', 'N/A'))
 
-        # --- 4. Plotting Tren (sama, tapi pakai n_top_trend dan judul baru) ---
-        if trend_cols:
-            try:
-                df_raw['average_trend'] = df_raw[trend_cols].apply(pd.to_numeric, errors='coerce').mean(axis=1).fillna(0)
-                # Gunakan n_top_trend dari slider
-                df_top_trend = df_raw.nlargest(n_top_trend, 'average_trend')
-                years_trend_plot = [y for y, c in trend_cols_with_year]
+                    # [PERUBAHAN] title_suffix disederhanakan
+                    title_suffix = f"({start_year_trend}-{end_year_trend})" if start_year_trend and end_year_trend else ""
+                    trend_title = f"Tren Tahunan {title_suffix} - Top {n_top_trend} Lokasi: '{selected_feature_trend}'"
+                    ax_trend.set_title(trend_title)
 
-                fig_trend, ax_trend = plt.subplots(figsize=(12, 7))
-                for _, row in df_top_trend.iterrows():
-                    trend_values = row[trend_cols].apply(pd.to_numeric, errors='coerce')
-                    if not trend_values.isnull().all(): ax_trend.plot(years_trend_plot, trend_values, marker='o', linestyle='-', label=row.get('Wilayah', 'N/A'))
+                    ax_trend.set_xlabel("Tahun"); ax_trend.set_ylabel(selected_feature_trend)
+                    ax_trend.yaxis.set_major_formatter(ScalarFormatter()); ax_trend.ticklabel_format(style='plain', axis='y')
+                    ax_trend.legend(title='Lokasi', bbox_to_anchor=(1.05, 1), loc='upper left'); ax_trend.grid(True, linestyle='--')
+                    plt.tight_layout(rect=[0, 0, 0.85, 1]); st.pyplot(fig_trend); plt.close(fig_trend)
+                except Exception as e_trend: 
+                    st.error(f"Gagal membuat plot tren: {e_trend}")
+            elif start_year_trend is not None:
+                st.warning(f"Tidak ditemukan kolom tahunan untuk '{selected_feature_trend}'.") 
 
-                # Update judul plot
-                title_suffix = f"({start_year_trend}-{end_year_trend})" if start_year_trend and end_year_trend and result_mode=='Range Tahun' else ""
-                trend_title = f"Tren Tahunan {title_suffix} - Top {n_top_trend} Lokasi: '{selected_feature_trend}'"
-                ax_trend.set_title(trend_title)
-
-                ax_trend.set_xlabel("Tahun"); ax_trend.set_ylabel(selected_feature_trend)
-                ax_trend.yaxis.set_major_formatter(ScalarFormatter()); ax_trend.ticklabel_format(style='plain', axis='y')
-                ax_trend.legend(title='Lokasi', bbox_to_anchor=(1.05, 1), loc='upper left'); ax_trend.grid(True, linestyle='--')
-                plt.tight_layout(rect=[0, 0, 0.85, 1]); st.pyplot(fig_trend); plt.close(fig_trend)
-            except Exception as e_trend: st.error(f"Gagal membuat plot tren: {e_trend}")
-        elif start_year_trend is not None:
-            st.warning(f"Tidak ditemukan kolom tahunan untuk '{selected_feature_trend}'.") # Pesan disingkat
-        # Jangan tampilkan warning jika start_year_trend None
-
-    else:
-        st.warning("Tidak ada fitur tersedia untuk menampilkan tren.")
+        else:
+            # Ini terjadi jika 'selected_features_info' kosong
+            st.warning("Tidak ada fitur yang dipilih untuk menampilkan tren.") 
 
     st.markdown("---") # Pemisah sebelum Top Kota
 
     # --- 8. TOP KOTA ---
     st.subheader("🏆 Peringkat Lokasi Teratas (Berdasarkan Rata-Rata Semua Tahun)")
-    peringkat_options = available_features if available_features else (FEATURE_PRODUKSI if 'FEATURE_PRODUKSI' in locals() else [])
+
+    # === [PERUBAHAN DI SINI] ===
+    # Opsi peringkat sekarang didasarkan pada fitur yang dipilih pengguna,
+    # bukan semua fitur yang tersedia di file.
+    peringkat_options = selected_features_info
+    # ==========================
+
     if peringkat_options:
         selected_feature_top = st.selectbox("Pilih Fitur untuk Peringkat:", peringkat_options, key='top_feature')
         n_top = st.slider("Jumlah Lokasi Ditampilkan:", min_value=5, max_value=20, value=10, key='n_top_slider')
 
-        # PERBAIKAN: Regex diperbaiki (menambahkan '$', menghapus ',')
+        # Logika ini mencari SEMUA kolom tahunan untuk fitur yang dipilih
+        # (Regex ini sudah benar)
         top_cols = sorted([c for c in df_raw.columns if re.match(rf'{re.escape(selected_feature_top)}_(\d{{4}})$', c, flags=re.IGNORECASE)])
 
         if top_cols:
             try:
+                # Menghitung rata-rata dari semua tahun yang ditemukan
                 df_raw['average_top'] = df_raw[top_cols].apply(pd.to_numeric, errors='coerce').mean(axis=1).fillna(0)
                 df_top = df_raw.nlargest(n_top, 'average_top')
 

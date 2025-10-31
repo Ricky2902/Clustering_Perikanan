@@ -58,7 +58,7 @@ with col2:
 # --- Selesai ---
 st.markdown("---")
 
-
+st.header("Selamat Datang di Website pemetaan dan Analisis Perikanan")
 # Menampilkan gambar utama
 # Pastikan gambar.png ada di dalam folder Assets
 image_path = os.path.join('assets', 'laut.png')
@@ -66,8 +66,6 @@ if os.path.exists(image_path):
     st.image(image_path, caption="perairan Pulau Gunung Api Banda, Salah Satu Ekosistem Laut yang kaya Akan jenis ikan Dan Terumbu Karang di Indonesia")
 else:
     st.warning(f"File gambar utama tidak ditemukan di '{image_path}'. Harap periksa path file Anda.")
-
-st.header("Selamat Datang di Website pemetaan dan Analisis Perikanan")
 
 st.write("""
 Indonesia, sebagai negara kepulauan terbesar di dunia, dianugerahi garis pantai yang sangat panjang dan wilayah laut yang luas. Posisi geografis ini menjadikan Indonesia sebagai poros maritim global dengan kekayaan sumber daya kelautan dan perikanan yang luar biasa. Potensi ini bukan hanya menjadi tulang punggung bagi ekonomi biru nasional, tetapi juga merupakan bagian krusial dari warisan alam yang harus dikelola dengan bijak dan berkelanjutan untuk generasi mendatang.

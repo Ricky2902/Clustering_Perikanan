@@ -100,7 +100,7 @@ with st.expander("Sumber data berasal dari mana?"):
     st.write("""
         Sumber data utama yang digunakan untuk dataset demo pada aplikasi ini berasal dari portal **Satu Data Kementerian Kelautan dan Perikanan (KKP)**, yang merupakan situs resmi statistik Kementrian Kelautan dan Perikanan.
         
-        - Portal Satu Data KKP: [https://statistik.kkp.go.id/](https://statistik.kkp.go.id/)
+        - Portal Satu Data KKP: [https://portaldata.kkp.go.id/portals/data-statistik/prod-ikan/tbl-dinamis](https://portaldata.kkp.go.id/portals/data-statistik/prod-ikan/tbl-dinamis)
     """)
 
 with st.expander("Apa isi dataset yang sudah tersedia (dataset demo)?"):
@@ -180,28 +180,31 @@ with st.expander("Apa itu metode BIRCH?"):
 
 with st.expander("Apa itu metode OPTICS?"):
     st.write("""
-        **Apa itu OPTICS?**
-       OPTICS (Ordering Points To Identify the Clustering Structure) adalah algoritma clustering berbasis kepadatan (density-based). Metode ini sangat baik untuk menemukan cluster dengan bentuk yang tidak beraturan dan mengidentifikasi outlier (data pencilan, ditandai -1).
-
-Nilai Wajib Diisi:
-
-Min Samples (MinPts): Ini adalah parameter wajib.
-
-Apa itu Min Samples?: Ini adalah jumlah minimum data/titik yang harus berkumpul berdekatan agar dianggap sebagai wilayah padat (inti cluster).
-
-Saran Pengisian: Aturan umum yang baik adalah mengaturnya menjadi 2 kali jumlah fitur yang Anda gunakan. Jika Anda menggunakan 4 fitur (Nelayan, Volume, Produksi, Konsumsi), maka Min Samples = 8 adalah titik awal yang sangat baik.
-
-Nilai Opsional (Bisa Diisi Manual atau Otomatis):
-
-Epsilon (eps): Ini adalah parameter yang menentukan jarak pencarian maksimum untuk mencari tetangga.
-
-Sistem Otomatis (Sangat Disarankan): Secara default, sistem akan menggunakan nilai Tak Terhingga (Infinity) jika Anda tidak mencentang box "Tentukan Epsilon (eps) secara manual".
-
-Mengapa Otomatis Lebih Baik?: Ini adalah cara kerja OPTICS yang sesungguhnya. Dengan membiarkannya tak terhingga, algoritma dapat menemukan cluster dengan tingkat kepadatan yang berbeda-beda (ada yang padat, ada yang renggang).
-
-Saran Manual (Tidak Disarankan): Jika Anda tetap ingin mengisinya secara manual, ingat bahwa data Anda sudah dinormalisasi (skala 0-1).
-
-Saran Nilai: Gunakan nilai yang sangat kecil. Titik awal yang baik adalah antara 0.1 dan 1.0 (misalnya, coba 0.5).
+        OPTICS (Ordering Points To Identify the Clustering Structure) adalah algoritma *clustering* berbasis **kepadatan (density-based)**. Metode ini sangat baik untuk menemukan *cluster* dengan **bentuk yang tidak beraturan** dan **mengidentifikasi *outlier*** (data pencilan, ditandai -1).
+        
+        ---
+        
+        #### Nilai Wajib Diisi:
+        
+        * **Min Samples (MinPts):** Ini adalah parameter **wajib**.
+        * **Apa itu Min Samples?**: Ini adalah jumlah minimum data/titik yang harus berkumpul berdekatan agar dianggap sebagai **wilayah padat (inti *cluster*)**.
+        * **Saran Pengisian**: Aturan umum yang baik adalah **2 kali jumlah fitur**.
+            * Untuk mode "Per Tahun", nilai kecil (misal: **8**) sudah baik.
+            * Untuk mode "Range Tahun" (dimensi tinggi), aplikasi ini akan secara otomatis menyarankan nilai yang jauh lebih tinggi (misal: **40**) untuk hasil yang lebih akurat.
+        
+        ---
+        
+        #### Nilai Opsional (Parameter Ekstraksi):
+        
+        Parameter **Epsilon (eps)** secara otomatis diatur ke Tak Terhingga (`np.inf`) di latar belakang agar algoritma dapat menemukan *cluster* dengan berbagai tingkat kepadatan. Anda dapat mengatur parameter ekstraksi berikut:
+        
+        * **Xi (Sensitivitas Cluster):**
+            * **Apa itu Xi?**: Menentukan seberapa 'curam' atau signifikan sebuah area padat agar bisa dianggap sebagai *cluster* terpisah. Rentangnya 0.01 - 0.1.
+            * **Saran Pengisian**: **0.05** (5%) adalah nilai *default* yang seimbang. Turunkan ke **0.01** (1%) jika Anda ingin mendeteksi *cluster* yang lebih kecil atau yang pemisahannya tidak terlalu jelas.
+        
+        * **Ukuran Cluster Minimum (Min Cluster Size):**
+            * **Apa itu?**: Jumlah minimum data (wilayah) agar bisa disebut sebagai "*cluster*". Kelompok yang lebih kecil dari nilai ini akan dianggap sebagai *noise* (pencilan).
+            * **Saran Pengisian**: **5** (default) akan menemukan kelompok-kelompok kecil. Naikkan nilai ini (misal: **10** atau **15**) jika Anda ingin hasil yang lebih 'bersih' dan hanya fokus pada kelompok-kelompok yang lebih besar.
     """)
 
 # === 4. HEADER HASIL CLUSTERING ===
