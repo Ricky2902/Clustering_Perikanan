@@ -78,7 +78,6 @@ def initialize_clustering_model(method, params):
             
             # Ambil nilai opsional baru dari params
             xi=params.get('xi', 0.05), 
-            min_cluster_size=params.get('min_cluster_size', 5) 
         )
     return None
 
