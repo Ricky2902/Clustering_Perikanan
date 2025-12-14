@@ -908,6 +908,90 @@ def tampilkan_profil_statistik(df_valid, result_mode, year_range, year, selected
 
     # Beri pemisah sebelum peta
     st.markdown("---")
+
+def tampilkan_rata_rata_median_cluster(df_valid, result_mode, year_range, year, selected_features):
+    """
+    Menampilkan tabel ringkasan di mana nilai setiap sel adalah:
+    Rata-rata dari (Median Tahun X, Median Tahun Y, ... dst) sesuai rentang waktu.
+    """
+    st.subheader("Rata-Rata Nilai Median per Fitur")
+
+    # 1. Tentukan list tahun yang akan dihitung
+    target_years = []
+    if result_mode == 'Range Tahun':
+        if year_range:
+            start_yr, end_yr = int(year_range[0]), int(year_range[1])
+            target_years = list(range(start_yr, end_yr + 1))
+    else:  # Mode Per Tahun
+        if year:
+            target_years = [int(year)]
+
+    if not target_years:
+        st.warning("Rentang tahun tidak valid.")
+        return
+
+    # 2. Dapatkan daftar kategori yang urut (Cluster 0, Cluster 1, ..., Outlier)
+    try:
+        # Pisahkan Outlier agar bisa ditaruh di akhir (opsional, untuk kerapian)
+        cats = [c for c in df_valid['Kategori'].unique() if c != 'Outlier']
+        cats.sort()
+        if 'Outlier' in df_valid['Kategori'].unique():
+            cats.append('Outlier')
+    except KeyError:
+        st.error("Kolom 'Kategori' tidak ditemukan.")
+        return
+
+    # 3. Proses Perhitungan
+    summary_data = []
+
+    for category in cats:
+        # Filter data berdasarkan cluster saat ini
+        df_cat = df_valid[df_valid['Kategori'] == category]
+        
+        # Siapkan dictionary untuk baris data
+        row_data = {'Kategori Cluster': category}
+
+        for feature in selected_features:
+            list_median_per_tahun = []
+            
+            # Loop setiap tahun untuk fitur tersebut (misal: Konsumsi_2019, Konsumsi_2020, dst)
+            for yr in target_years:
+                col_name = f"{feature}_{yr}"
+                
+                # Cek apakah kolom ada di dataframe
+                if col_name in df_cat.columns:
+                    # Ambil median tahun tersebut
+                    median_val = df_cat[col_name].median()
+                    
+                    # Pastikan nilainya valid (bukan NaN) sebelum dimasukkan list
+                    if pd.notna(median_val):
+                        list_median_per_tahun.append(median_val)
+            
+            # Hitung Rata-rata dari kumpulan Median tersebut
+            if len(list_median_per_tahun) > 0:
+                avg_of_medians = sum(list_median_per_tahun) / len(list_median_per_tahun)
+                row_data[feature] = avg_of_medians
+            else:
+                row_data[feature] = 0.0
+
+        summary_data.append(row_data)
+
+    # 4. Tampilkan Hasil dalam Dataframe
+    if summary_data:
+        df_summary = pd.DataFrame(summary_data)
+        
+        # Set Kategori sebagai index agar tampilan lebih bersih
+        df_summary.set_index('Kategori Cluster', inplace=True)
+        
+        # Tampilkan dengan format angka 2 desimal dan highlight warna
+        st.dataframe(df_summary.style.format("{:,.2f}").background_gradient(cmap="Blues"))
+        
+        # Penjelasan singkat di bawah tabel (opsional)
+        st.caption(f"Nilai ini adalah rata-rata dari median  tahun {target_years[0]} s.d {target_years[-1]}.")
+    else:
+        st.write("Tidak ada data untuk ditampilkan.")
+
+    st.markdown("---")
 # =============================================================================
 # FUNGSI TAMPILAN HASIL: PETA
 # =============================================================================
@@ -1123,6 +1207,7 @@ def tampilkan_info_lanjutan_wilayah(df_valid, feature_cols_used, selected_featur
         else:
             st.info("Pilih satu atau lebih wilayah dari daftar di atas untuk melihat detailnya.")
     st.markdown("---")
+    
 # =============================================================================
 # FUNGSI TAMPILAN HASIL: EVALUASI
 # =============================================================================
@@ -1460,17 +1545,13 @@ def tampilkan_peringkat_lokasi(df_raw, selected_features):
 def main():
     """Fungsi utama yang menjalankan alur aplikasi Streamlit."""
     
-    # Tampilkan Sidebar dan dapatkan pengaturan
     pengaturan = tampilkan_sidebar()
     
-    # Tampilkan halaman utama (Judul, Deskripsi, Download Aset)
     tampilkan_halaman_utama_info()
 
-    # Logika 1: Jika tombol "Mulai" ditekan
     if st.session_state.run_clustering and pengaturan:
-        jalankan_proses_clustering(pengaturan) # Fungsi ini akan menyimpan hasil ke state & rerun
+        jalankan_proses_clustering(pengaturan)
     
-    # Logika 2: Jika hasil sudah siap
     elif st.session_state.get('results_ready', False):
         # Ambil semua data hasil dari session state
         results = st.session_state.results
@@ -1489,51 +1570,43 @@ def main():
             st.session_state.results_ready = False
             st.stop()
 
-        # Daftar untuk menampung semua figure PDF
         figures_for_pdf = []
 
-        # 1. Tampilkan Tabel (dan dapatkan data Excel)
         excel_sheets = tampilkan_tabel_hasil(df_valid, result_mode, year_range, year, selected_features, feature_cols_used)
         
-        # 2. Tampilkan Grafik Anggota (dan dapatkan figure-nya)
         fig_bar = tampilkan_grafik_anggota(df_valid)
         
-        # 3. Tampilkan Tombol Download Excel (menggunakan data dari #1 dan #2)
         tampilkan_download_excel(excel_sheets, fig_bar)
         
-        # 4. Tampilkan Boxplot (dan dapatkan daftar figure-nya)
         boxplot_figs = tampilkan_boxplot_karakteristik(df_valid, result_mode, year_range, year, selected_features)
         figures_for_pdf.extend(boxplot_figs)
         
-        # 5. Tampilkan Profil Statistik (Mean, Median, dll)
         tampilkan_profil_statistik(df_valid, result_mode, year_range, year, selected_features)
+        tampilkan_rata_rata_median_cluster(df_valid, result_mode, year_range, year, selected_features)
 
-        # 6. Tampilkan Peta (dan dapatkan figure statisnya)
         fig_map_static = tampilkan_peta_sebaran(df_valid, result_mode, year_range, year)
         if fig_map_static:
             figures_for_pdf.append(fig_map_static)
             
-        # 7. Tampilkan Info Wilayah (Expander)
         tampilkan_info_lanjutan_wilayah(df_valid, feature_cols_used, selected_features)
         
-        # 8. Tampilkan Evaluasi (dan dapatkan figure gabungannya)
         fig_eval = tampilkan_evaluasi_clustering(X_scaled, labels, df_valid)
         if fig_eval:
             figures_for_pdf.append(fig_eval)
             
-        # 9. Tampilkan Tombol Download PDF (menggunakan semua figure)
         tampilkan_download_pdf(figures_for_pdf)
         
-        # 10. Tampilkan Tren Tahunan
         tampilkan_tren_tahunan(df_raw, result_mode, year_range, selected_features)
         
-        # 11. Tampilkan Peringkat Lokasi
         tampilkan_peringkat_lokasi(df_raw, selected_features)
 
-    # Logika 3: Halaman default (jika tidak sedang running dan hasil tidak siap)
     else:
-        st.info("Selamat datang! Silakan upload file Excel Anda di sidebar untuk memulai analisis.")
-        # Membersihkan state jika pengguna mengunggah file baru tapi belum klik 'mulai'
+        st.info("""
+            **Selamat datang!** Silakan upload file Excel Anda di sidebar untuk memulai analisis.
+                
+            ---
+            Jika Anda ingin mengetahui metode dengan hasil evaluasi terbaik, silakan kunjungi **[halaman Info]** dan buka bagian **"Hasil Terbaik Setiap Metode (Rekomendasi)"**.
+        """)
         if 'results_ready' in st.session_state:
             del st.session_state.results_ready
             del st.session_state.results

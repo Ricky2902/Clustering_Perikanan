@@ -6,9 +6,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# === [KODE CSS ANDA] ===
-# (Ini dipertahankan untuk membuat sidebar gelap)
-
 st.markdown("""
 <style>
     /* Target sidebar */
@@ -47,8 +44,6 @@ st.markdown("""
 st.title("Pusat Informasi")
 st.write("Temukan jawaban atas pertanyaan umum mengenai aplikasi, data, dan metode yang digunakan di bawah ini.")
 st.markdown("---")
-
-# --- Bagian Tanya Jawab menggunakan Expander ---
 
 # === 1. HEADER UMUM ===
 st.header("Umum")
@@ -205,6 +200,34 @@ with st.expander("Apa itu metode OPTICS?"):
         * **Ukuran Cluster Minimum (Min Cluster Size):**
             * **Apa itu?**: Jumlah minimum data (wilayah) agar bisa disebut sebagai "*cluster*". Kelompok yang lebih kecil dari nilai ini akan dianggap sebagai *noise* (pencilan).
             * **Saran Pengisian**: **5** (default) akan menemukan kelompok-kelompok kecil. Naikkan nilai ini (misal: **10** atau **15**) jika Anda ingin hasil yang lebih 'bersih' dan hanya fokus pada kelompok-kelompok yang lebih besar.
+    """)
+
+with st.expander(" Hasil Terbaik Setiap Metode (Rekomendasi)"):
+    st.write("""
+        Berikut merupakan hasil evaluasi terbaik berdasarkan eksperimen pada data **Range Tahun (Gabungan 2019-2023)**:
+        
+        ---
+        
+        #### 1. K-Means
+        * **Parameter Optimal:** Jumlah Cluster ($K$) = **2**.
+        * **Skor Evaluasi:** *Silhouette Score* **0.479**.
+        
+        ---
+        
+        #### 2. BIRCH (Metode Paling Unggul)
+        * **Parameter Optimal:**
+            * Jumlah Cluster ($K$) = **2**
+            * *Threshold* = **0.2**
+            * *Branching Factor* = **50**
+        * **Skor Evaluasi:** *Silhouette Score* **0.646** (Kategori: Baik).
+        
+        ---
+        
+        #### 3. OPTICS
+        * **Parameter Optimal:**
+            * *Min Samples* = **40**
+            * *Xi* = **0.01**
+        * **Skor Evaluasi:** *Silhouette Score* **0.457**.
     """)
 
 # === 4. HEADER HASIL CLUSTERING ===
