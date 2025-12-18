@@ -909,12 +909,12 @@ def tampilkan_profil_statistik(df_valid, result_mode, year_range, year, selected
     # Beri pemisah sebelum peta
     st.markdown("---")
 
-def tampilkan_rata_rata_median_cluster(df_valid, result_mode, year_range, year, selected_features):
+def tampilkan_median_cluster(df_valid, result_mode, year_range, year, selected_features):
     """
     Menampilkan tabel ringkasan di mana nilai setiap sel adalah:
-    Rata-rata dari (Median Tahun X, Median Tahun Y, ... dst) sesuai rentang waktu.
+    MEDIAN murni dari seluruh data pada rentang waktu yang dipilih.
     """
-    st.subheader("Rata-Rata Nilai Median per Fitur")
+    st.subheader("Nilai Median per Fitur (Cluster)")
 
     # 1. Tentukan list tahun yang akan dihitung
     target_years = []
@@ -930,9 +930,8 @@ def tampilkan_rata_rata_median_cluster(df_valid, result_mode, year_range, year, 
         st.warning("Rentang tahun tidak valid.")
         return
 
-    # 2. Dapatkan daftar kategori yang urut (Cluster 0, Cluster 1, ..., Outlier)
+    # 2. Dapatkan daftar kategori yang urut
     try:
-        # Pisahkan Outlier agar bisa ditaruh di akhir (opsional, untuk kerapian)
         cats = [c for c in df_valid['Kategori'].unique() if c != 'Outlier']
         cats.sort()
         if 'Outlier' in df_valid['Kategori'].unique():
@@ -952,25 +951,22 @@ def tampilkan_rata_rata_median_cluster(df_valid, result_mode, year_range, year, 
         row_data = {'Kategori Cluster': category}
 
         for feature in selected_features:
-            list_median_per_tahun = []
+            # Kumpulkan nama-nama kolom yang valid untuk fitur & range tahun ini
+            cols_to_calculate = []
             
-            # Loop setiap tahun untuk fitur tersebut (misal: Konsumsi_2019, Konsumsi_2020, dst)
             for yr in target_years:
                 col_name = f"{feature}_{yr}"
-                
-                # Cek apakah kolom ada di dataframe
                 if col_name in df_cat.columns:
-                    # Ambil median tahun tersebut
-                    median_val = df_cat[col_name].median()
-                    
-                    # Pastikan nilainya valid (bukan NaN) sebelum dimasukkan list
-                    if pd.notna(median_val):
-                        list_median_per_tahun.append(median_val)
+                    cols_to_calculate.append(col_name)
             
-            # Hitung Rata-rata dari kumpulan Median tersebut
-            if len(list_median_per_tahun) > 0:
-                avg_of_medians = sum(list_median_per_tahun) / len(list_median_per_tahun)
-                row_data[feature] = avg_of_medians
+            # Hitung Median
+            if cols_to_calculate:
+                # Kita ambil semua data dari kolom-kolom tersebut, jadikan satu list panjang (stack),
+                # lalu cari mediannya. Ini lebih akurat daripada memediankan median tahunan.
+                median_val = df_cat[cols_to_calculate].stack().median()
+                
+                # Jika hasilnya NaN (kosong), set ke 0
+                row_data[feature] = median_val if pd.notna(median_val) else 0.0
             else:
                 row_data[feature] = 0.0
 
@@ -980,14 +976,14 @@ def tampilkan_rata_rata_median_cluster(df_valid, result_mode, year_range, year, 
     if summary_data:
         df_summary = pd.DataFrame(summary_data)
         
-        # Set Kategori sebagai index agar tampilan lebih bersih
+        # Set Kategori sebagai index
         df_summary.set_index('Kategori Cluster', inplace=True)
         
         # Tampilkan dengan format angka 2 desimal dan highlight warna
         st.dataframe(df_summary.style.format("{:,.2f}").background_gradient(cmap="Blues"))
         
-        # Penjelasan singkat di bawah tabel (opsional)
-        st.caption(f"Nilai ini adalah rata-rata dari median  tahun {target_years[0]} s.d {target_years[-1]}.")
+        # Penjelasan singkat
+        st.caption(f"Nilai di atas adalah Median dari data tahun {target_years[0]} s.d {target_years[-1]}.")
     else:
         st.write("Tidak ada data untuk ditampilkan.")
 
@@ -1582,7 +1578,7 @@ def main():
         figures_for_pdf.extend(boxplot_figs)
         
         tampilkan_profil_statistik(df_valid, result_mode, year_range, year, selected_features)
-        tampilkan_rata_rata_median_cluster(df_valid, result_mode, year_range, year, selected_features)
+        tampilkan_median_cluster(df_valid, result_mode, year_range, year, selected_features)
 
         fig_map_static = tampilkan_peta_sebaran(df_valid, result_mode, year_range, year)
         if fig_map_static:
