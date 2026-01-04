@@ -1,49 +1,13 @@
 ﻿# Clustering_Perikanan
-Panduan Instalasi dan Menjalankan Program
-
-Ikuti langkah-langkah di bawah ini untuk mengonfigurasi perangkat dan menjalankan aplikasi:
-
-1. Persiapan Awal
-Pastikan Anda telah menginstal Python 3.9 atau versi yang lebih baru pada perangkat Anda.
-Unduh atau clone repository dari GitHub melalui terminal:
-
-Bash
-
-git clone https://github.com/Ricky2902/Clustering_Perikanan.git
+Analisis Klaster Perikanan Tangkap Indonesia (BIRCH, K-Means, OPTICS)Proyek ini merupakan aplikasi berbasis website yang dikembangkan untuk mengelompokkan kabupaten/kota di Indonesia berdasarkan karakteristik perikanan tangkap laut, meliputi volume produksi, nilai produksi, dan tingkat konsumsi per kapita. Sistem ini bertujuan untuk mendukung pemetaan potensi maritim strategis guna mendukung SDG 14 (Life Below Water).🚀 Fitur UtamaKomparasi Algoritma: Implementasi K-Means, BIRCH, dan OPTICS untuk menemukan struktur data terbaik.Analisis Temporal: Pemrosesan data tahunan (2019-2023) untuk akurasi yang lebih tinggi dibanding data gabungan.Evaluasi Matriks: Perhitungan otomatis skor Silhouette Coefficient dan Davies-Bouldin Index (DBI).Visualisasi: Boxplot distribusi fitur dan pemetaan wilayah untuk setiap klaster.🛠️ Panduan InstalasiPastikan Anda telah menginstal Python 3.9+ sebelum memulai.1. Clone RepositoryBashgit clone https://github.com/Ricky2902/Clustering_Perikanan.git
 cd Clustering_Perikanan
-2. Membuat dan Mengaktifkan Virtual Environment (Envi)
-Sangat disarankan untuk menggunakan virtual environment agar tidak terjadi konflik antar pustaka (library):
-
-Windows:
-
-Bash
-
-python -m venv env
+2. Setup Virtual Environment (Envi)Sangat disarankan untuk menggunakan virtual environment agar tidak terjadi konflik pustaka:Windows:Bashpython -m venv env
 .\env\Scripts\activate
-macOS/Linux:
-
-Bash
-
-python3 -m venv env
+macOS/Linux:Bashpython3 -m venv env
 source env/bin/activate
-3. Menginstal Library yang Dibutuhkan
-Setelah environment aktif, instal semua dependensi yang diperlukan (seperti NumPy, Scikit-Learn, dan Streamlit) menggunakan file requirements.txt:
-
-Bash
-
-pip install --upgrade pip
+3. Instalasi DependensiInstal semua pustaka (libraries) yang diperlukan melalui file requirements.txt:Bashpip install --upgrade pip
 pip install -r requirements.txt
-4. Menjalankan Aplikasi
-Aplikasi ini dikembangkan menggunakan framework Streamlit. Jalankan perintah berikut untuk membuka aplikasi di browser Anda:
-
-Bash
-
-streamlit run app.py
-Aplikasi biasanya akan otomatis terbuka di alamat http://localhost:8501.
-
-Catatan Penting untuk Penguji:
-Dataset: Gunakan data perikanan tahun 2019-2023 yang tersedia di folder data/ untuk melakukan analisis klaster.
-
-Metode Terbaik: Sesuai hasil penelitian, pilih algoritma BIRCH dengan parameter K=2 untuk mendapatkan hasil klasterisasi yang paling optimal (Skor Silhouette: 0,722).
-
+💻 Cara Menjalankan ProgramJalankan perintah berikut di terminal Anda untuk membuka aplikasi di browser:Bashstreamlit run app.py
+Aplikasi akan secara otomatis terbuka pada alamat: http://localhost:8501.📊 Ringkasan Hasil PenelitianAlgoritma Terbaik: BIRCH terbukti paling unggul dalam memetakan data perikanan nasional.Konfigurasi Optimal: Pengelompokan menjadi $K=2$ klaster.Performa Tertinggi: Pada data tahun 2023, skor Silhouette mencapai 0,722 dan DBI 0,580.Struktur Klaster:Klaster 1 (Anomali): 10 wilayah dengan produktivitas ekstrem (Sentra Produksi Utama).Klaster 0 (Umum): 323 wilayah dengan tingkat produksi rendah-menengah.📦 Tech StackLanguage: Python.Framework: Streamlit.Data Analysis: NumPy, Pandas, Scikit-Learn.Visualization: Matplotlib, Seaborn.
 Validasi: Program ini telah lulus uji Black Box 100% dan telah melalui tahap User Acceptance Test (UAT).
+
